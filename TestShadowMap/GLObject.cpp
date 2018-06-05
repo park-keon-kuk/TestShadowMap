@@ -120,7 +120,7 @@ bool VAO::load(const char *obj_file)
 					nbuf.push_back(n[ni[i] - 1].z); //nz
 				}
 			}
-			else if(hasNormal){
+			else if (hasNormal) {
 				int map = fscanf_s(fin, "%d//%d %d//%d %d//%d", &vi[0], &ni[0], &vi[1], &ni[1], &vi[2], &ni[2]);
 				if (map != 6) {
 					puts("there is no vertex + normal set.");
@@ -372,7 +372,7 @@ void Shader::unload()
 	m_program = 0;
 }
 
-bool Shader::isLoaded()
+bool Shader::isLoaded() const
 {
 	return (m_program != 0);
 }
@@ -508,11 +508,11 @@ bool FBO::create(int width, int height, int colorTextureCount, bool hasDepthText
 
 	// 검사합니다.
 	bool result;
-	
+
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 		printAllErrors("FraneBuffer Fail!");
 		destroy();
-		
+
 		result = false;
 	}
 	else {
@@ -563,7 +563,7 @@ void FBO::unbind()
 void FBO::setDrawbuffers(const std::initializer_list<GLenum>& buffer_list)
 {
 	std::vector<GLenum> buffers(buffer_list.begin(), buffer_list.end());
-	
+
 	for (auto& value : buffers) {
 		value += GL_COLOR_ATTACHMENT0;
 	}
@@ -648,7 +648,7 @@ Texture::~Texture()
 bool Texture::load(const char *image_file)
 {
 	stbi_set_flip_vertically_on_load(true);
-	
+
 	int channel;
 	auto data = stbi_load(image_file, &m_width, &m_height, &channel, 0);
 
@@ -700,4 +700,172 @@ void Texture::unbind()
 {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+/*////////////////////////////////////////////////////////////////////////*/
+/*																		  */
+/* Quad Renderer														  */
+/*																		  */
+/*////////////////////////////////////////////////////////////////////////*/
+
+QuadRenderer::QuadRenderer(int row, int col)
+{
+	create(row, col);
+}
+
+QuadRenderer::QuadRenderer()
+{
+	create(1, 1);
+}
+
+QuadRenderer::~QuadRenderer()
+{
+	if (isCreated())
+		destroy();
+}
+
+void QuadRenderer::use()
+{
+	m_quadShader.use();
+
+	setBorder(0.01f);
+	setBorderColor(0.5f, 0.5f, 0.5f);
+}
+
+void QuadRenderer::create(int row, int col)
+{
+	m_row = row;
+	m_col = col;
+
+	w = 1.f / col;
+	h = 1.f / row;
+	offset_x = 1.f / col - 1.f;
+	offset_y = 1.f - 1.f / row;
+
+	if (m_quadShader.isLoaded())
+		m_quadShader.unload();
+
+	loadShader();
+}
+
+void QuadRenderer::destroy()
+{
+	m_quadShader.unload();
+}
+
+bool QuadRenderer::isCreated() const
+{
+	return (m_quadShader.isLoaded());
+}
+
+void QuadRenderer::unuse()
+{
+	Shader::unuse();
+	Texture::unbind();
+}
+
+void QuadRenderer::setBorder(float coef)
+{
+	glUniform2f(SL_border_coef, coef, 1.f - coef);
+}
+
+void QuadRenderer::setBorderColor(float r, float g, float b)
+{
+	glUniform3f(SL_border_color, r, g, b);
+}
+
+void QuadRenderer::render(int row, int col, GLuint texture)
+{
+	float pos_x = offset_x + 2.f * w * col;
+	float pos_y = offset_y - 2.f * h * row;
+
+	float tmat[] = {
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		pos_x, pos_y, 0.f, 1.f
+	};
+
+	float smat[] = {
+		w, 0, 0, 0,
+		0, h, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1
+	};
+
+	glUniformMatrix4fv(SL_tmat, 1, GL_FALSE, tmat);
+	glUniformMatrix4fv(SL_smat, 1, GL_FALSE, smat);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glDrawArrays(GL_QUADS, 0, 4);
+}
+
+void QuadRenderer::loadShader()
+{
+	const char* vertexSource = R"(
+// Vertex Shader
+#version 430 core
+
+const vec2 aPosition[4] = {
+	vec2(-1, -1),
+	vec2(1, -1),
+	vec2(1, 1),
+	vec2(-1, 1),
+};
+
+const vec2 aTexCoord[4] = {
+	vec2(0, 0),
+	vec2(1, 0),
+	vec2(1, 1),
+	vec2(0, 1),
+};
+
+out vec2 texCoord;
+
+layout(location = 0) uniform mat4 tmat;
+layout(location = 1) uniform mat4 smat;
+
+void main()
+{
+	gl_Position = tmat * smat * vec4(aPosition[gl_VertexID], 0, 1);
+
+	texCoord = aTexCoord[gl_VertexID];
+}
+
+)";
+
+	const char* fragSource = R"(
+// Fragment Shader
+#version 430 core
+
+layout(binding = 0) uniform sampler2D map;
+
+/*
+	st:
+	s: value for comparing left and up.
+	t: value for comparing right and down.
+*/
+layout(location = 2) uniform vec2 border_coef;
+layout(location = 3) uniform vec3 border_color;
+
+in vec2 texCoord;
+
+layout(location = 0) out vec4 frag_color;
+
+void main()
+{
+	if( texCoord.x <= border_coef.s || texCoord.x >= border_coef.t ||
+		texCoord.y <= border_coef.s || texCoord.y >= border_coef.t) 
+	{
+		frag_color = vec4(border_color, 1);
+		return;
+	}
+	frag_color = texture(map, texCoord);
+}
+
+)";
+
+	m_quadShader.loadFromSource(vertexSource, fragSource);
 }

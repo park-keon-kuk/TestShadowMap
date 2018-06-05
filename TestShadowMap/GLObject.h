@@ -28,8 +28,9 @@ public:
 	*/
 	void render_once();
 	/*
-		바인드하고 렌더링합니다.
-		언바이드는 하지 않습니다.
+		다음이 순서대로 1번씩 실행됩니다.
+		bind()
+		render()
 	*/
 	void bind_render();
 	void bind();
@@ -51,7 +52,7 @@ public:
 	bool load(const char *vert_file, const char *frag_File);
 	bool loadFromSource(const char *vert, const char *frag);
 	void unload();
-	bool isLoaded();
+	bool isLoaded() const;
 
 	void use();
 	static void unuse();
@@ -131,4 +132,49 @@ public:
 	static void unbind();
 
 	GLuint getTexture() const;
+};
+
+class QuadRenderer
+{
+	enum ShaderLocation {
+		SL_tmat,
+		SL_smat,
+		SL_border_coef,
+		SL_border_color,
+	};
+
+	Shader m_quadShader;
+	int m_row;
+	int m_col;
+
+	float w, h, offset_x, offset_y;
+
+public:
+	QuadRenderer();
+	QuadRenderer(int row, int col);
+	~QuadRenderer();
+
+	void create(int row, int col);
+	void destroy();
+	bool isCreated() const;
+
+	void use();
+	void unuse();
+	
+	/*
+		coef:
+		if coef is 0.0, then no border.
+		if coef is 0.5, then half of row and column(from outside to inside) is used by border.
+		if coef is 1.0, then all row and column is used by border.
+		default border is 0.01
+	*/
+	void setBorder(float coef);
+	/*
+		default color is gray(0.5, 0.5, 0.5).
+	*/
+	void setBorderColor(float r, float g, float b);
+	void render(int row, int col, GLuint texture);
+
+private:
+	void loadShader();
 };

@@ -4,7 +4,12 @@
 #include <cstdio>
 #include "GLObject.h"
 
-int g_width = 1000;
+#ifdef _DEBUG
+#include <cstdlib>
+#include <crtdbg.h>
+#endif
+
+int g_width = 1200;
 int g_height = 800;
 float g_aspect = (float)g_width / (float)g_height;
 bool g_pause = false;
@@ -17,6 +22,11 @@ void mousebuttonCallback(GLFWwindow*, int btn, int act, int);
 
 int main()
 {
+#ifdef _DEBUG
+	_CrtDumpMemoryLeaks();
+	_CrtSetDbgFlag(0x21);
+#endif
+
 	/* 초기화, 에러 핸들링 등록, 이벤트 콜백 등록, OpenGL 초기화 */
 	/* -------------------------------------------------------------------------------------- */
 	glfwInit();
@@ -30,9 +40,7 @@ int main()
 
 	/* 객체 생성 및 초기화 */
 	/* -------------------------------------------------------------------------------------- */
-	VAO vao;				vao.load("resources/objects/stanford_bunny_scaled.obj");
-	Shader quadShader;		quadShader.load("resources/shaders/quad.vert", "resources/shaders/quad.frag");
-	Texture helpTexture;	helpTexture.load("resources/textures/help.png");
+	QuadRenderer * qr = new QuadRenderer(2, 3);
 
 	/* 객체 생성 및 초기화 검사 */
 	/* -------------------------------------------------------------------------------------- */
@@ -48,57 +56,13 @@ int main()
 			continue;
 		}
 
-		quadShader.use();
-		glm::mat4 mat;
-		{
-			constexpr int row = 2;
-			constexpr int col = 3;
-			constexpr float w = 1.f / col;
-			constexpr float h = 1.f / row;
-			constexpr float offset_x = 1.f / col - 1.f;
-			constexpr float offset_y = 1.f - 1.f / row;
-
-			auto setPos = [&](int r, int c) {
-				float pos_x = offset_x + 2.f * w * c;
-				float pos_y = offset_y - 2.f * h * r;
-
-				mat = glm::translate(glm::vec3(pos_x, pos_y, 0.f)) *
-					glm::scale(glm::vec3(w, h, 1.f));
-
-				glUniformMatrix4fv(0, 1, GL_FALSE, &mat[0][0]);
-			};
-
-			// A 버퍼 색
-			setPos(0, 0);
-			oit_renderer->getPeelFBO(0).bindColorTexture(0);
-			glDrawArrays(GL_QUADS, 0, 4);
-
-			// A 버퍼 깊이
-			setPos(1, 0);
-			oit_renderer->getPeelFBO(0).bindDepthTexture(0);
-			glDrawArrays(GL_QUADS, 0, 4);
-
-			// B 버퍼 색
-			setPos(0, 1);
-			oit_renderer->getPeelFBO(1).bindColorTexture(0);
-			glDrawArrays(GL_QUADS, 0, 4);
-
-			// B 버퍼 깊이
-			setPos(1, 1);
-			oit_renderer->getPeelFBO(1).bindDepthTexture(0);
-			glDrawArrays(GL_QUADS, 0, 4);
-
-			// 결과 색
-			setPos(0, 2);
-			oit_renderer->bindOITTexture();
-			glDrawArrays(GL_QUADS, 0, 4);
-
-			// 설명
-			setPos(1, 2);
-			helpTexture.bind();
-			glDrawArrays(GL_QUADS, 0, 4);
-		}
-		quadShader.unuse();
+		glViewport(0, 0, g_width, g_height);
+		qr->use();
+		qr->setBorderColor(1, 0, 0);
+		for(int r = 0; r < 2; r++)
+			for(int c = 0; c < 3; c++)
+				qr->render(r, c, 0);
+		qr->unuse();
 
 		// 버퍼 스왑, 이벤트 폴
 		glfwSwapBuffers(window);
@@ -111,10 +75,7 @@ int main()
 
 	/* 객체 제거 */
 	/* -------------------------------------------------------------------------------------- */
-	delete oit_renderer;
-	vao.unload();
-	quadShader.unload();
-	helpTexture.unload();
+	delete qr;
 
 	/* 객체 제거 검사 */
 	/* -------------------------------------------------------------------------------------- */
@@ -167,22 +128,11 @@ void mousebuttonCallback(GLFWwindow*, int button, int action, int mods)
 {
 	if (action == GLFW_PRESS) {
 		if (button == GLFW_MOUSE_BUTTON_LEFT) {
-			g_peelCount++;
-
-			printf("peeling count: %d\n", g_peelCount);
 		}
 		else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-			g_peelCount--;
-
-			if (g_peelCount < 0)
-				g_peelCount = 0;
-
-			printf("peeling count: %d\n", g_peelCount);
-
 		}
 		else {
 			g_pause = !g_pause;
-
 			puts(g_pause ? "pause !" : "start !");
 		}
 
