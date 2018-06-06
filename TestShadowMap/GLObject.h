@@ -10,6 +10,12 @@
 int printAllErrors(const char * caption = nullptr);
 const char * getGLErrorStr(GLenum err);
 
+/************************************************************/
+/*															*/
+// OpenGL Objects						
+/*															*/
+/************************************************************/
+
 //Vertex Array Object
 class VAO
 {
@@ -138,6 +144,13 @@ public:
 
 	GLuint getTexture() const;
 };
+
+
+/************************************************************/
+/*															*/
+// My Utility						
+/*															*/
+/************************************************************/
 
 class QuadRenderer
 {
