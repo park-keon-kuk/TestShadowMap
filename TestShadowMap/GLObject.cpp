@@ -4,17 +4,22 @@
 #include <vector>
 #include "GLObject.h"
 
-void printAllErrors(const char * caption /*= nullptr*/)
+int printAllErrors(const char * caption /*= nullptr*/)
 {
 	if (caption)
 		puts(caption);
 
-	int err = 0;
+	int err;
+	int err_count = 0;
 
 	do {
+		// 에러 출력
 		err = glGetError();
 		printf(" Error: %s\n", getGLErrorStr(err));
+		err_count++;
 	} while (err != GL_NO_ERROR);
+
+	return err_count - 1;
 }
 
 const char * getGLErrorStr(GLenum err)

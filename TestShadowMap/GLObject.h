@@ -2,7 +2,12 @@
 #include <gl/GL.h>
 #include <initializer_list>
 
-void printAllErrors(const char * caption = nullptr);
+/*
+	return:
+	if 0, there is no error
+	otherwise, there is number of return value error.
+*/
+int printAllErrors(const char * caption = nullptr);
 const char * getGLErrorStr(GLenum err);
 
 //Vertex Array Object

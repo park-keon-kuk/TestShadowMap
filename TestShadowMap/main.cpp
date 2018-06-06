@@ -18,7 +18,30 @@ void initContext(bool useDefault, int major = 3, int minor = 3, bool useCompatib
 void framebufferSizeCallback(GLFWwindow*, int w, int h);
 void mousebuttonCallback(GLFWwindow*, int btn, int act, int);
 
-// for shadow map
+struct Renderer
+{
+	QuadRenderer qr;
+	VAO vao;
+
+	void create() {
+		qr.create(3, 3);
+		vao.load("C:/users/pkk11/onedrive/objects/ico_sphere.obj");
+	}
+	void destroy() {
+		qr.destroy();
+		vao.unload();
+	}
+	void render() {
+		glViewport(0, 0, g_width, g_height);
+
+		qr.use();
+		qr.setBorderColor(1, 0, 0);
+		for (int r = 0; r < 2; r++)
+			for (int c = 0; c < 3; c++)
+				qr.render(r, c, 0);
+		qr.unuse();
+	}
+} g_renderer;
 
 int main()
 {
@@ -40,7 +63,8 @@ int main()
 
 	/* 객체 생성 및 초기화 */
 	/* -------------------------------------------------------------------------------------- */
-	QuadRenderer * qr = new QuadRenderer(2, 3);
+	g_renderer.create();
+
 
 	/* 객체 생성 및 초기화 검사 */
 	/* -------------------------------------------------------------------------------------- */
@@ -56,13 +80,8 @@ int main()
 			continue;
 		}
 
-		glViewport(0, 0, g_width, g_height);
-		qr->use();
-		qr->setBorderColor(1, 0, 0);
-		for(int r = 0; r < 2; r++)
-			for(int c = 0; c < 3; c++)
-				qr->render(r, c, 0);
-		qr->unuse();
+		// 렌더링
+		g_renderer.render();
 
 		// 버퍼 스왑, 이벤트 폴
 		glfwSwapBuffers(window);
@@ -75,7 +94,7 @@ int main()
 
 	/* 객체 제거 */
 	/* -------------------------------------------------------------------------------------- */
-	delete qr;
+	g_renderer.destroy();
 
 	/* 객체 제거 검사 */
 	/* -------------------------------------------------------------------------------------- */
