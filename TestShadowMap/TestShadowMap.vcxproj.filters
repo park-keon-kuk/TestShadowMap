@@ -25,4 +25,12 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\Shaders\shadow_map.frag">
+      <Filter>리소스 파일</Filter>
+    </None>
+    <None Include="resources\Shaders\shadow_map.vert">
+      <Filter>리소스 파일</Filter>
+    </None>
+  </ItemGroup>
 </Project>

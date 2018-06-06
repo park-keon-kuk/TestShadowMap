@@ -18,30 +18,36 @@ void initContext(bool useDefault, int major = 3, int minor = 3, bool useCompatib
 void framebufferSizeCallback(GLFWwindow*, int w, int h);
 void mousebuttonCallback(GLFWwindow*, int btn, int act, int);
 
-struct Renderer
+struct Scene
 {
-	QuadRenderer qr;
-	VAO vao;
+	VAO cubeVAO;
+	FBO shadowFBO;
+	Shader shadowShader;
 
-	void create() {
-		qr.create(3, 3);
-		vao.load("C:/users/pkk11/onedrive/objects/ico_sphere.obj");
+	bool create() {
+		bool result = true;
+
+		result &= cubeVAO.load("C:/users/pkk11/onedrive/objects/cube.obj");
+		result &= shadowFBO.create(1024, 1024, 0, true);
+
+		return result;
 	}
-	void destroy() {
-		qr.destroy();
-		vao.unload();
-	}
+
 	void render() {
 		glViewport(0, 0, g_width, g_height);
+		glClearColor(0, 0, 0, 1);
+		glClearDepth(1);
+		glDepthFunc(GL_LESS);
+		glEnable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		qr.use();
-		qr.setBorderColor(1, 0, 0);
-		for (int r = 0; r < 2; r++)
-			for (int c = 0; c < 3; c++)
-				qr.render(r, c, 0);
-		qr.unuse();
+
+		cubeVAO.render_once();
 	}
-} g_renderer;
+
+	Scene() = default;
+	~Scene() = default;
+};
 
 int main()
 {
@@ -63,8 +69,16 @@ int main()
 
 	/* 객체 생성 및 초기화 */
 	/* -------------------------------------------------------------------------------------- */
-	g_renderer.create();
+	auto scene = new Scene();
 
+	if (scene->create()) {
+		puts("객체 생성 성공!");
+	}
+	else {
+		puts("객체 생성 실패");
+		delete scene;
+		return -1;
+	}
 
 	/* 객체 생성 및 초기화 검사 */
 	/* -------------------------------------------------------------------------------------- */
@@ -74,17 +88,13 @@ int main()
 	/* -------------------------------------------------------------------------------------- */
 	while (!glfwWindowShouldClose(window))
 	{
-		if (g_pause) {
-			// 이벤트 폴
-			glfwPollEvents();
-			continue;
+		if (!g_pause) {
+			// 렌더링
+			scene->render();
+			// 버퍼 스왑, 이벤트 폴
+			glfwSwapBuffers(window);
 		}
-
-		// 렌더링
-		g_renderer.render();
-
-		// 버퍼 스왑, 이벤트 폴
-		glfwSwapBuffers(window);
+		
 		glfwPollEvents();
 	}
 
@@ -94,7 +104,7 @@ int main()
 
 	/* 객체 제거 */
 	/* -------------------------------------------------------------------------------------- */
-	g_renderer.destroy();
+	delete scene;
 
 	/* 객체 제거 검사 */
 	/* -------------------------------------------------------------------------------------- */
