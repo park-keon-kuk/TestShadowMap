@@ -9,8 +9,8 @@
 #include <crtdbg.h>
 #endif
 
-int g_width = 1200;
-int g_height = 800;
+int g_width = 900;
+int g_height = 900;
 float g_aspect = (float)g_width / (float)g_height;
 bool g_pause = false;
 
@@ -18,35 +18,125 @@ void initContext(bool useDefault, int major = 3, int minor = 3, bool useCompatib
 void framebufferSizeCallback(GLFWwindow*, int w, int h);
 void mousebuttonCallback(GLFWwindow*, int btn, int act, int);
 
-struct Scene
+class Scene
 {
+	// objects
 	VAO cubeVAO;
 	FBO shadowFBO;
 	Shader shadowShader;
+	Shader renderShader;
 
+	// renderer
+	QuadRenderer qr;
+
+	// values
+	float angle;
+	glm::vec3 lightPos;
+	glm::mat4 lightPMat; 
+	glm::mat4 lightVMat; 
+
+	/********************************************/
+	/*											*/
+	// main()에서 불리는 함수
+	/*											*/
+	/********************************************/
+
+public:
 	bool create() {
-		bool result = true;
+		qr.create(5, 5);
 
-		result &= cubeVAO.load("C:/users/pkk11/onedrive/objects/cube.obj");
-		result &= shadowFBO.create(1024, 1024, 0, true);
+		do {
+			if (!cubeVAO.load("C:/users/pkk11/onedrive/objects/cube.obj")) break;
+			if (!shadowFBO.create(1024, 1024, 1, true)) break;
+			if (!shadowShader.load("resources/shaders/shadow")) break;
+			if (!renderShader.load("resources/shaders/render")) break;
 
-		return result;
+			return true;
+
+		} while (false);
+
+		return false;
 	}
 
 	void render() {
+		// first precess
+		angle = (float)glfwGetTime();
+		lightPos = glm::vec3(cos(angle), 1, sin(angle));
+		lightPMat = glm::ortho(-4.f, 4.f, -4.f, 4.f, -4.f, 4.f);
+		lightVMat = glm::lookAt(lightPos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+		makeShadowMap();
+
+		// second process
 		glViewport(0, 0, g_width, g_height);
-		glClearColor(0, 0, 0, 1);
-		glClearDepth(1);
-		glDepthFunc(GL_LESS);
+		glClearColor(1.f, 1.f, 1.f, 1.f);
 		glEnable(GL_DEPTH_TEST);
+		glClearDepth(1.f);
+		glDepthFunc(GL_LESS);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// light에서 본 모습과 shadow map
+		qr.use();
+		qr.render(0, 3, shadowFBO.getDepthTex());
+		qr.render(0, 4, shadowFBO.getColorTex());
+		qr.unuse();
 
-		cubeVAO.render_once();
+		// shadow가 적용된 렌더링
+		renderShader.use();
+		
+		glm::mat4 pmat = glm::perspective(45.f, g_aspect, 0.1f, 100.f);
+		glm::mat4 vmat = glm::lookAt(glm::vec3(0, 3, 3), { 0, 0, 0 }, { 0, 1, 0 });
+		glUniformMatrix4fv(0, 1, GL_FALSE, &pmat[0][0]);
+		glUniformMatrix4fv(1, 1, GL_FALSE, &vmat[0][0]);
+		glUniformMatrix4fv(3, 1, GL_FALSE, &lightPMat[0][0]);
+		glUniformMatrix4fv(4, 1, GL_FALSE, &lightVMat[0][0]);
+		
+		shadowFBO.bindDepthTexture();
+		
+		renderScene();
+
+		renderShader.unuse();
 	}
 
 	Scene() = default;
 	~Scene() = default;
+
+private:
+	/********************************************/
+	/*											*/
+	// 추가 함수
+	/*											*/
+	/********************************************/
+
+	void makeShadowMap() {
+		shadowFBO.bind();
+		glClearColor(0, 0, 0, 1.f);
+		glEnable(GL_DEPTH_TEST);
+		glClearDepth(1.f);
+		glDepthFunc(GL_LESS);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		shadowShader.use();
+		glUniformMatrix4fv(0, 1, GL_FALSE, &lightPMat[0][0]);
+		glUniformMatrix4fv(1, 1, GL_FALSE, &lightVMat[0][0]);
+
+		renderScene();
+
+		shadowShader.unuse();
+		shadowFBO.unbind();
+	}
+
+	void renderScene() {
+		glm::mat4 cubeMMat1 = glm::mat4(1.f);
+		cubeMMat1 *= glm::translate(glm::vec3(0.f, 0.25f, 0.f));
+		glUniformMatrix4fv(2, 1, GL_FALSE, &cubeMMat1[0][0]);
+		cubeVAO.render_once();
+
+		glm::mat4 cubeMMat2 = glm::mat4(1.f);
+		cubeMMat2 *= glm::translate(glm::vec3(0.f, -1.f, 0.f));
+		cubeMMat2 *= glm::scale(glm::vec3(2.f, 2.f, 2.f));
+		glUniformMatrix4fv(2, 1, GL_FALSE, &cubeMMat2[0][0]);
+		cubeVAO.render_once();
+	}
 };
 
 int main()
@@ -94,7 +184,7 @@ int main()
 			// 버퍼 스왑, 이벤트 폴
 			glfwSwapBuffers(window);
 		}
-		
+
 		glfwPollEvents();
 	}
 
@@ -149,14 +239,18 @@ void framebufferSizeCallback(GLFWwindow*, int w, int h)
 	g_aspect = (float)g_width / (float)g_height;
 	printf("%d, %d\n", w, h);
 
-	g_pause = false;
-	puts("start !");
+	if (g_pause) {
+		g_pause = false;
+		puts("start !");
+	}
 }
 
 void mousebuttonCallback(GLFWwindow*, int button, int action, int mods)
 {
 	if (action == GLFW_PRESS) {
 		if (button == GLFW_MOUSE_BUTTON_LEFT) {
+			g_pause = !g_pause;
+			puts(g_pause ? "pause !" : "start !");
 		}
 		else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
 		}
@@ -164,6 +258,5 @@ void mousebuttonCallback(GLFWwindow*, int button, int action, int mods)
 			g_pause = !g_pause;
 			puts(g_pause ? "pause !" : "start !");
 		}
-
 	}
 }

@@ -153,8 +153,10 @@
     <ClInclude Include="GLObject.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="resources\Shaders\shadow_map.frag" />
-    <None Include="resources\Shaders\shadow_map.vert" />
+    <None Include="resources\Shaders\render.frag" />
+    <None Include="resources\Shaders\render.vert" />
+    <None Include="resources\Shaders\shadow.frag" />
+    <None Include="resources\Shaders\shadow.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

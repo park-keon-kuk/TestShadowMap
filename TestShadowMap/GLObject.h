@@ -1,6 +1,7 @@
 #pragma once
 #include <gl/GL.h>
 #include <initializer_list>
+#include <string>
 
 /*
 	return:
@@ -60,6 +61,11 @@ public:
 	Shader() = default;
 	~Shader();
 
+	/*
+		file:
+		converted two string 'file.vert' and 'file.frag'.
+	*/
+	bool load(const std::string& file);
 	bool load(const char *vert_file, const char *frag_File);
 	bool loadFromSource(const char *vert, const char *frag);
 	void unload();

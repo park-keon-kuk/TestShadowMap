@@ -297,6 +297,14 @@ Shader::~Shader()
 		unload();
 }
 
+bool Shader::load(const std::string & file)
+{
+	return load(
+		(file + ".vert").c_str(), 
+		(file + ".frag").c_str()
+	);
+}
+
 bool Shader::load(const char *vert_file, const char *frag_File)
 {
 	//세이더들을 만든다.

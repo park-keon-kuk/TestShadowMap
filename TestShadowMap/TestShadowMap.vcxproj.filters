@@ -26,10 +26,16 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="resources\Shaders\shadow_map.frag">
+    <None Include="resources\Shaders\render.frag">
       <Filter>리소스 파일</Filter>
     </None>
-    <None Include="resources\Shaders\shadow_map.vert">
+    <None Include="resources\Shaders\render.vert">
+      <Filter>리소스 파일</Filter>
+    </None>
+    <None Include="resources\Shaders\shadow.frag">
+      <Filter>리소스 파일</Filter>
+    </None>
+    <None Include="resources\Shaders\shadow.vert">
       <Filter>리소스 파일</Filter>
     </None>
   </ItemGroup>
