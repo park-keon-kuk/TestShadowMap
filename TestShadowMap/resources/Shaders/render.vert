@@ -21,7 +21,7 @@ void main()
 
 	gl_Position = pmat * vmat * world_pos;
 
-	v.normal = normal * 0.5f + 0.5f;
+	v.normal = mat3(transpose(inverse(mmat))) * normal;
 
 	v.light_space_position = light_pmat * light_vmat * world_pos;
 }

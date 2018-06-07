@@ -15,5 +15,5 @@ void main()
 {
 	gl_Position = pmat * vmat * mmat * vec4(vertex, 1.f);
 
-	v.normal = normal * 0.5f + 0.5f;
+	v.normal = mat3(transpose(inverse(mmat))) * normal;
 }

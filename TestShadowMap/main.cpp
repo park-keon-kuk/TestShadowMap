@@ -47,7 +47,7 @@ public:
 
 		do {
 			if (!cubeVAO.load("C:/users/pkk11/onedrive/objects/cube.obj")) break;
-			if (!shadowFBO.create(1024, 1024, 1, true)) break;
+			if (!shadowFBO.create(2048, 2048, 1, true)) break;
 			if (!shadowShader.load("resources/shaders/shadow")) break;
 			if (!renderShader.load("resources/shaders/render")) break;
 
